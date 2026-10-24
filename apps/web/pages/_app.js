@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import Link from "next/link";
+import Head from "next/head";
 import { NET, short } from "../lib/net";
 import { WalletProvider, useWallet } from "../lib/walletContext";
 
@@ -9,9 +10,14 @@ function Layout({ children }) {
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#08060b]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between px-5">
           <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-mezo-amber to-mezo-ember text-sm font-black text-[#1a0f02] shadow-glow-sm">
-              ₿
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.svg"
+              alt="PAYWALL logo"
+              width={30}
+              height={30}
+              className="drop-shadow-[0_0_10px_rgba(247,147,26,0.5)]"
+            />
             <span className="font-display text-[16px] font-bold tracking-[0.14em] text-white">
               PAYWALL
             </span>
@@ -93,6 +99,20 @@ function NavWalletButton() {
 export default function App({ Component, pageProps }) {
   return (
     <WalletProvider>
+      <Head>
+        <title>PAYWALL — AI agents pay your API in Bitcoin's stablecoin</title>
+        <meta
+          name="description"
+          content="Pay-per-request APIs settled in MUSD or BTC on Mezo via the x402 protocol. Built for the Mezo Buildathon."
+        />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta property="og:title" content="PAYWALL — metered APIs on Mezo" />
+        <meta
+          property="og:description"
+          content="Agents pay per request in MUSD/BTC over x402. Gasless for buyers, one middleware line for sellers."
+        />
+        <meta property="og:image" content="/logo.svg" />
+      </Head>
       <Layout>
         <Component {...pageProps} />
       </Layout>
