@@ -54,11 +54,15 @@ function TerminalCard() {
           {l.t || "\u00A0"}
         </p>
       ))}
-      <div className="pointer-events-none absolute -left-8 top-10 hidden rounded-xl border border-white/10 bg-[#0c0a10]/90 px-3 py-1.5 text-[11px] text-white/60 backdrop-blur animate-float lg:block">
-        ⚡ 0 gas for buyers
-      </div>
-      <div className="pointer-events-none absolute -right-6 bottom-14 hidden rounded-xl border border-white/10 bg-[#0c0a10]/90 px-3 py-1.5 text-[11px] text-white/60 backdrop-blur animate-float lg:block" style={{ animationDelay: "1.2s" }}>
-        🔑 no API keys
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.07] pt-4">
+        {["⚡ 0 gas for buyers", "🔑 no API keys", "⛓ settled on Mezo"].map((c) => (
+          <span
+            key={c}
+            className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-white/60"
+          >
+            {c}
+          </span>
+        ))}
       </div>
     </div>
   );
