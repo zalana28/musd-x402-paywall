@@ -19,6 +19,8 @@ export const config = {
     "0x7b7C000000000000000000000000000000000000",
   // Settlement asset for quotes: "musd" (default) or "btc"
   paymentAsset: (process.env.PAYMENT_ASSET || "musd").toLowerCase(),
+  // Optional load-test override for BTC-mode prices (e.g. "0.0001")
+  loadPriceBtc: process.env.LOAD_PRICE_BTC || null,
   facilitatorUrl:
     process.env.FACILITATOR_URL || "https://facilitator.vativ.io",
   payTo: process.env.SELLER_ADDRESS,

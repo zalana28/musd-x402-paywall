@@ -12,6 +12,11 @@ import { paymentMiddlewareFromHTTPServer } from "@x402/express";
 import { HTTPFacilitatorClient, x402ResourceServer, x402HTTPResourceServer } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { createPublicClient, defineChain, http } from "viem";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DATA_FILE = resolve(__dirname, "../.data/settlements.jsonl");
 
 const app = express();
 app.use(
@@ -104,7 +109,9 @@ function mezoDiscountNote() {
 const parseUsd = (s) => Number(String(s).replace(/[^0-9.]/g, "")) || 0;
 const priceFor = (endpointPrice) => {
   if (config.paymentAsset !== "btc") return endpointPrice;
-  const amount = BigInt(Math.round(parseUsd(endpointPrice) * 1e18)).toString();
+  const amount = config.loadPriceBtc
+    ? BigInt(Math.round(parseFloat(config.loadPriceBtc) * 1e18)).toString()
+    : BigInt(Math.round(parseUsd(endpointPrice) * 1e18)).toString();
   // EIP-712 domain of the paying token must ride inside the AssetAmount;
   // the facilitator settles this asset via permit2 (not eip3009)
   return {
@@ -167,7 +174,25 @@ resourceServer.onAfterSettle(async (ctx) => {
     at: stats.lastSettledAt,
   });
   if (settlements.length > 50) settlements.length = 50;
+  try {
+    mkdirSync(dirname(DATA_FILE), { recursive: true });
+    appendFileSync(DATA_FILE, JSON.stringify(settlements[0]) + "\n");
+  } catch {}
 });
+
+// restore persisted telemetry on boot (restart-safe stats & receipts)
+if (existsSync(DATA_FILE)) {
+  for (const line of readFileSync(DATA_FILE, "utf8").split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const s = JSON.parse(line);
+      settlements.push(s);
+      stats.paidRequests += 1;
+      if (s.amountWei) stats.grossMusdWei += BigInt(s.amountWei);
+    } catch {}
+  }
+  stats.lastSettledAt = settlements[0]?.at ?? null;
+}
 
 const httpServer = new x402HTTPResourceServer(resourceServer, routes);
 app.use(
