@@ -18,8 +18,9 @@ function Layout({ children }) {
               height={30}
               className="drop-shadow-[0_0_10px_rgba(247,147,26,0.5)]"
             />
-            <span className="font-display text-[16px] font-bold tracking-[0.14em] text-white">
-              PAYWALL
+            <span className="font-display text-[19px] font-bold tracking-tight">
+              <span className="text-white">p</span>
+              <span className="grad-text">wall</span>
             </span>
           </Link>
           <div className="flex items-center gap-0.5 text-[13px] sm:gap-1 sm:text-sm">
@@ -100,13 +101,13 @@ export default function App({ Component, pageProps }) {
   return (
     <WalletProvider>
       <Head>
-        <title>PAYWALL — AI agents pay your API in Bitcoin's stablecoin</title>
+        <title>paywall — AI agents pay your API in Bitcoin's stablecoin</title>
         <meta
           name="description"
           content="Pay-per-request APIs settled in MUSD or BTC on Mezo via the x402 protocol. Built for the Mezo Buildathon."
         />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <meta property="og:title" content="PAYWALL — metered APIs on Mezo" />
+        <meta property="og:title" content="paywall — metered APIs on Mezo" />
         <meta
           property="og:description"
           content="Agents pay per request in MUSD/BTC over x402. Gasless for buyers, one middleware line for sellers."
