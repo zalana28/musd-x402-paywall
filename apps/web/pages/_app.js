@@ -19,7 +19,7 @@ function Layout({ children }) {
               className="drop-shadow-[0_0_10px_rgba(247,147,26,0.5)]"
             />
             <span className="font-display text-[19px] font-bold tracking-tight">
-              <span className="text-white">p</span>
+              <span className="text-white">pay</span>
               <span className="grad-text">wall</span>
             </span>
           </Link>
