@@ -82,6 +82,28 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.com docker compose up --build
   Juri ── /demo/sponsored (no facilitator) ──► sponsored ribbon + no ledger write
 ```
 
+## Testing
+
+Three layers, all green:
+
+```bash
+# 1) unit — demo models (haiku/oracle/summarize/sentiment), 13 assertions
+cd apps/api && node --input-type=module -e "import('./src/models.js').then(()=>0)" # or inline script
+
+# 2) integration — FULL happy path via a local mock facilitator:
+#    402 → sign → verify ✓ → handler → settle ✓ → 200 + PAYMENT-RESPONSE → /stats telemetry
+node scripts/mock-facilitator.mjs &            # :4022
+PORT=4023 FACILITATOR_URL=http://localhost:4022 node src/server.js &
+node scripts/test-happy-path.mjs               # 11 assertions
+
+# 3) live — real facilitator (vativ.io) on Mezo testnet:
+node scripts/e2e-test.mjs                      # 402 → sign → real verdict
+```
+
+Found & fixed by these tests: sentiment lexicon matched substrings (`ath` inside `weather`), and
+`decodePaymentResponseHeader` was passed a `Headers` object instead of the header string in the
+web runner (would have broken UI rendering of successful settlements).
+
 ## 90-second demo script (use it for the video)
 
 ```

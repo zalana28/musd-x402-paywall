@@ -7,7 +7,7 @@ function Layout({ children }) {
     <div className="flex min-h-screen flex-col">
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#08060b]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-mezo-amber to-mezo-ember text-sm font-black text-[#1a0f02] shadow-glow-sm">
               ₿
             </span>
@@ -15,14 +15,14 @@ function Layout({ children }) {
               MUSD <span className="text-mezo-amber">x402</span> Paywall
             </span>
           </Link>
-          <div className="flex items-center gap-1 text-sm">
-            <Link href="/playground" className="rounded-lg px-3.5 py-2 text-white/70 transition hover:bg-white/5 hover:text-white">
+          <div className="flex items-center gap-0.5 text-[13px] sm:gap-1 sm:text-sm">
+            <Link href="/playground" className="rounded-lg px-2 py-2 text-white/70 transition hover:bg-white/5 hover:text-white sm:px-3.5">
               Playground
             </Link>
-            <Link href="/ledger" className="rounded-lg px-3.5 py-2 text-white/70 transition hover:bg-white/5 hover:text-white">
+            <Link href="/ledger" className="rounded-lg px-2 py-2 text-white/70 transition hover:bg-white/5 hover:text-white sm:px-3.5">
               Ledger
             </Link>
-            <Link href="/docs" className="rounded-lg px-3.5 py-2 text-white/70 transition hover:bg-white/5 hover:text-white">
+            <Link href="/docs" className="rounded-lg px-2 py-2 text-white/70 transition hover:bg-white/5 hover:text-white sm:px-3.5">
               Docs
             </Link>
             <a

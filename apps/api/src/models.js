@@ -88,8 +88,11 @@ const BULLISH = [
 ];
 const BEARISH = [
   "crash", "bear", "dump", "loss", "hack", "rug", "fear", "sell",
-  "short", "ban", "bubble", "rekt", "liquidat", "fud", "down",
+  "short", "ban", "bubble", "rekt", "liquidation", "fud", "down",
 ];
+
+// Word-boundary match so "ath" doesn't fire inside "weather", etc.
+const hasWord = (body, w) => new RegExp(`\\b${w}\\b`).test(body);
 
 export function sentimentScore(text) {
   const body = clamp(text, MAX_TEXT).toLowerCase();
@@ -97,9 +100,9 @@ export function sentimentScore(text) {
   const matched = [];
   let score = 0;
   for (const w of BULLISH)
-    if (body.includes(w)) { score += 1; matched.push(`+${w}`); }
+    if (hasWord(body, w)) { score += 1; matched.push(`+${w}`); }
   for (const w of BEARISH)
-    if (body.includes(w)) { score -= 1; matched.push(`-${w}`); }
+    if (hasWord(body, w)) { score -= 1; matched.push(`-${w}`); }
   const norm = Math.max(-1, Math.min(1, score / 3));
   const label =
     norm > 0.25 ? "bullish" : norm < -0.25 ? "bearish" : "neutral";

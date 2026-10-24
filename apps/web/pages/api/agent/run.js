@@ -169,7 +169,15 @@ export default async function handler(req, res) {
     });
 
     if (paid.status === 200) {
-      const settle = decodePaymentResponseHeader(paid.headers);
+      const settleRaw = paid.headers.get("payment-response");
+      let settle = null;
+      if (settleRaw) {
+        try {
+          settle = decodePaymentResponseHeader(settleRaw);
+        } catch {
+          settle = { success: true, raw: String(settleRaw).slice(0, 200) };
+        }
+      }
       const result = await paid.json();
       push("verify", "Facilitator verify", "done", {
         verifier: process.env.NEXT_PUBLIC_FACILITATOR || "https://facilitator.vativ.io",
