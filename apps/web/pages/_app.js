@@ -1,6 +1,7 @@
 import "../styles/globals.css";
 import Link from "next/link";
 import { NET, short } from "../lib/net";
+import { WalletProvider, useWallet } from "../lib/walletContext";
 
 function Layout({ children }) {
   return (
@@ -25,15 +26,7 @@ function Layout({ children }) {
             <Link href="/docs" className="rounded-lg px-2 py-2 text-white/70 transition hover:bg-white/5 hover:text-white sm:px-3.5">
               Docs
             </Link>
-            <a
-              href={`${NET.explorer}/address/${NET.seller}`}
-              target="_blank"
-              rel="noreferrer"
-              className="ml-2 hidden items-center gap-2 rounded-lg border border-white/10 px-3 py-1.5 mono text-[11px] text-white/60 transition hover:border-mezo-orange/50 hover:text-mezo-gold sm:flex"
-            >
-              <span className="live-dot" />
-              {short(NET.seller)}
-            </a>
+            <NavWalletButton />
           </div>
         </div>
       </nav>
@@ -55,7 +48,15 @@ function Layout({ children }) {
             · MUSD Track
           </p>
           <p className="mono text-xs">
-            eip155:31611 · MUSD {short(NET.musd)} · x402 v2
+            eip155:31611 · MUSD {short(NET.musd)} · x402 v2 ·{" "}
+            <a
+              href={`${NET.explorer}/address/${NET.seller}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-mezo-gold/70 hover:text-mezo-gold"
+            >
+              payTo {short(NET.seller)}
+            </a>
           </p>
         </div>
       </footer>
@@ -63,10 +64,38 @@ function Layout({ children }) {
   );
 }
 
+function NavWalletButton() {
+  const { address, connecting, connect } = useWallet();
+  if (!address) {
+    return (
+      <button
+        onClick={connect}
+        disabled={connecting}
+        className="ml-2 rounded-lg bg-gradient-to-br from-mezo-amber to-mezo-ember px-3.5 py-1.5 text-[12px] font-bold text-[#1a0f02] transition hover:brightness-110 disabled:opacity-60"
+      >
+        {connecting ? "Connecting…" : "Connect Wallet"}
+      </button>
+    );
+  }
+  return (
+    <a
+      href={`${NET.explorer}/address/${address}`}
+      target="_blank"
+      rel="noreferrer"
+      className="ml-2 flex items-center gap-2 rounded-lg border border-mezo-mint/40 px-3 py-1.5 mono text-[11px] text-mezo-mint transition hover:border-mezo-mint"
+    >
+      <span className="live-dot" />
+      {short(address)}
+    </a>
+  );
+}
+
 export default function App({ Component, pageProps }) {
   return (
-    <Layout>
-      <Component {...pageProps} />
-    </Layout>
+    <WalletProvider>
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
+    </WalletProvider>
   );
 }

@@ -8,6 +8,7 @@ import {
   walletSignTypedData,
   walletApprovePermit2,
 } from "../lib/wallet.js";
+import { useWallet } from "../lib/walletContext.jsx";
 
 const ENDPOINTS = [
   {
@@ -74,10 +75,10 @@ export default function Playground() {
   const [approving, setApproving] = useState(false);
   const [approveResult, setApproveResult] = useState(null);
 
-  // external (injected) wallet state — MetaMask/Brave/OKX
-  const [extWallet, setExtWallet] = useState(null); // { address }
-  const [extConnecting, setExtConnecting] = useState(false);
-  const [extError, setExtError] = useState(null);
+  // external (injected) wallet — shared with the navbar via context
+  const walletCtx = useWallet();
+  const extWallet = walletCtx.address ? { address: walletCtx.address } : null;
+  const extConnecting = walletCtx.connecting;
 
   // progressive reveal
   const [revealed, setRevealed] = useState(0);
@@ -154,30 +155,14 @@ export default function Playground() {
   }
 
   async function connectExt() {
-    setExtConnecting(true);
-    setExtError(null);
-    try {
-      const w = await connectWallet();
-      setExtWallet(w);
-    } catch (e) {
-      const msg = String(e?.message || e);
-      setExtError(
-        msg === "NO_WALLET"
-          ? "No injected wallet detected. Install MetaMask (or use Brave) and reload."
-          : msg
-      );
-    } finally {
-      setExtConnecting(false);
-    }
+    await walletCtx.connect();
   }
 
   function disconnectExt() {
-    setExtWallet(null);
-    setExtError(null);
+    walletCtx.disconnect();
   }
 
   async function approveViaWallet(assetAddress, label) {
-    setExtError(null);
     try {
       const tx = await walletApprovePermit2(assetAddress);
       setApproveResult({
@@ -187,7 +172,7 @@ export default function Playground() {
       setTimeout(() => walletAddr && refreshBalance(), 6000);
       setTimeout(() => walletAddr && refreshBalance(), 15000);
     } catch (e) {
-      setExtError(String(e?.message || e));
+      setApproveResult({ ok: false, error: String(e?.message || e) });
     }
   }
 
@@ -543,9 +528,9 @@ export default function Playground() {
                 </div>
               </div>
             )}
-            {extError && (
+            {walletCtx.error && (
               <p className="mt-3 text-[12px] leading-relaxed text-mezo-rose/90">
-                {extError}
+                {walletCtx.error}
               </p>
             )}
           </div>
