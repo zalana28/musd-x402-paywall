@@ -155,7 +155,7 @@ export default function Home() {
       <section className="container-wide px-5 py-14 sm:px-8">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "settled on Mezo", val: settled != null ? `${Number(settled).toFixed(3)} BTC` : "—", sub: "real facilitator txs" },
+            { label: "settled on Mezo", val: settled != null ? `${Number(settled).toFixed(3)} ${stats?.grossAsset || "BTC"}` : "—", sub: "real facilitator txs" },
             { label: "paid requests", val: stats ? String(stats.paidRequests) : "—", sub: "counted by onAfterSettle" },
             { label: "metered endpoints", val: "4", sub: "$0.001 – $0.005 / call" },
             { label: "network", val: "eip155:31611", sub: "Mezo Matsnet · gas BTC" },

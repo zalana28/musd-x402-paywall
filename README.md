@@ -124,6 +124,18 @@ Rehearse once with Juri Mode ON so the video never waits.
 
 ## Audit log
 
+### v0.6 — load run & hardening 2026-10-24
+
+1. **Ledger cold-scan took ~17s** (2 assets × 190k blocks) — range trimmed to 60k blocks and scan
+   parallelism 4→8; warm cache 10s unchanged.
+2. **Settlement telemetry is now restart-safe** — appended to `.data/settlements.jsonl`
+   (mkdir fix for a silent ENOENT) and restored on boot; receipts survive restarts.
+3. **/stats exposes `grossAsset`** so the home stat labels BTC/MUSD honestly per billing mode.
+4. **Branded 404 page** (was the default white Next.js one).
+5. **130-run paid load test** documented — 111 caller-confirmed, 135 settled on-chain
+   (19 client-timeouts landed anyway); telemetry rebuilt from on-chain Transfer logs as
+   the source of truth.
+
 ### v0.5 — audit 2026-10-24 (round 2)
 
 1. **`.dockerignore` patterns were root-only** — Docker matches `.env`/`node_modules` without `**/` at context root only, so `apps/api/.env` (seller key) and `apps/web/.env.local` still leaked into images. All patterns now use `**/` prefixes; `.env.example` re-included.

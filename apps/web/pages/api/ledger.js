@@ -22,8 +22,8 @@ const ASSETS = [
 
 // Mezo testnet RPC caps eth_getLogs ranges at 10,000 blocks.
 const CHUNK = 9_500;
-const TOTAL_RANGE = 190_000;
-const PARALLEL = 4;
+const TOTAL_RANGE = 60_000;
+const PARALLEL = 8;
 const CACHE_TTL = 10_000;
 
 let cache = { at: 0, data: null };

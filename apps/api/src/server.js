@@ -418,6 +418,7 @@ app.get("/stats", (_req, res) =>
     ...stats,
     grossMusdWei: stats.grossMusdWei.toString(),
     grossMusd: Number(stats.grossMusdWei) / 1e18,
+    grossAsset: config.paymentAsset === "btc" ? "BTC" : "MUSD",
     settlements,
     payTo: config.payTo,
   })
