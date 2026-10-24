@@ -4,6 +4,8 @@
 *Stripe for AI agents, settled in Bitcoin's stablecoin.*
 Built for the [Mezo Buildathon](https://mezo.org/blog/mezo-buildathon-is-underway/) — **MUSD + MEZO tracks.**
 
+**Repo:** https://github.com/zalana28/musd-x402-paywall
+
 ```
                       ┌─────────────────────────────────────────────┐
                       │                Mezo Matsnet                 │
