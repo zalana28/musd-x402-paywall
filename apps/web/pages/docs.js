@@ -154,6 +154,61 @@ await walletClient.sendTransaction({
         </p>
       </section>
 
+      {/* 5. mcp */}
+      <section className="glass mb-6 p-6">
+        <h2 className="mb-1 font-display text-xl font-semibold text-white">
+          5 · Paid MCP tools
+        </h2>
+        <p className="mb-3 text-sm text-white/55">
+          The whole catalog is also exposed as an MCP server at{" "}
+          <span className="mono text-mezo-gold">POST /mcp</span> (JSON-RPC 2.0).{" "}
+          <span className="mono">tools/call</span> proxies to the paywalled endpoints and passes
+          the x402 <span className="mono">PAYMENT-SIGNATURE</span> through — agents pay per tool call.
+        </p>
+        <Code>{`$ curl -X POST http://localhost:4021/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# unpaid tool call → machine-readable price
+$ curl -X POST http://localhost:4021/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call",
+       "params":{"name":"haiku","arguments":{"topic":"mezo"}}}'
+→ error -32001 "payment required" { price: "$0.001", asset, network, facilitator }
+
+# retry the same call with header: PAYMENT-SIGNATURE: <base64 payload> → content`}</Code>
+      </section>
+
+      {/* 6. receipts */}
+      <section className="glass mb-6 p-6">
+        <h2 className="mb-1 font-display text-xl font-semibold text-white">
+          6 · Receipts
+        </h2>
+        <p className="mb-3 text-sm text-white/55">
+          Every settlement gets a receipt from the{" "}
+          <span className="mono">onAfterSettle</span> hook:
+        </p>
+        <Code>{`$ curl http://localhost:4021/v1/receipt/<txHash>
+
+{ "txHash": "0x99da…", "payer": "0x490F…", "amountWei": "1000000000000000",
+  "endpoint": "/v1/haiku?…", "at": "2026-10-24T…" }`}</Code>
+      </section>
+
+      {/* 7. wallet connect */}
+      <section className="glass mb-6 p-6">
+        <h2 className="mb-1 font-display text-xl font-semibold text-white">
+          7 · Connect Wallet (injected)
+        </h2>
+        <p className="mb-3 text-sm text-white/55">
+          The navbar button connects MetaMask/Brave/OKX (EIP-1193), auto-adds the Mezo
+          Testnet network, and every payment becomes an EIP-712 popup signed in the
+          user's own wallet — the key never touches the server. Two-phase flow:{" "}
+          <span className="mono">/api/agent/prepare</span> → wallet signs →{" "}
+          <span className="mono">/api/agent/submit</span>. BTC wallets (Xverse/Unisat)
+          arrive via Mezo Passport (roadmap).
+        </p>
+      </section>
+
       {/* addresses */}
       <section className="glass p-6">
         <h2 className="mb-3 font-display text-xl font-semibold text-white">

@@ -51,9 +51,15 @@ export default function Ledger() {
         </div>
         <div className="flex gap-3">
           <div className="glass px-6 py-4 text-right">
-            <p className="label">total settled</p>
+            <p className="label">MUSD settled</p>
             <p className="font-display text-3xl font-bold text-mezo-gold">
-              {data ? `${data.total.toFixed(3)} MUSD` : "—"}
+              {data ? `${(data.totals?.MUSD || 0).toFixed(3)}` : "—"}
+            </p>
+          </div>
+          <div className="glass px-6 py-4 text-right">
+            <p className="label">BTC settled</p>
+            <p className="font-display text-3xl font-bold text-mezo-amber">
+              {data ? `${(data.totals?.BTC || 0).toFixed(3)}` : "—"}
             </p>
           </div>
           <div className="glass px-6 py-4 text-right">
@@ -114,6 +120,7 @@ export default function Ledger() {
               <tr className="border-b border-white/[0.06] text-left">
                 <th className="label px-5 py-3">tx</th>
                 <th className="label px-5 py-3">from</th>
+                <th className="label px-5 py-3">asset</th>
                 <th className="label px-5 py-3 text-right">amount</th>
               </tr>
             </thead>
@@ -139,8 +146,13 @@ export default function Ledger() {
                   <td className="mono px-5 py-3.5 text-xs text-white/55">
                     {short(t.from)}
                   </td>
+                  <td className="px-5 py-3.5">
+                    <span className={`chip !py-0.5 !text-[10px] ${t.asset === "BTC" ? "!border-mezo-amber/40 !text-mezo-amber" : ""}`}>
+                      {t.asset}
+                    </span>
+                  </td>
                   <td className="px-5 py-3.5 text-right font-display font-semibold text-mezo-mint">
-                    +{t.usd} MUSD
+                    +{t.usd}
                   </td>
                 </tr>
               ))}

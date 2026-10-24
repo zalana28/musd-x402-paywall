@@ -9,6 +9,7 @@ import {
   walletApprovePermit2,
 } from "../lib/wallet.js";
 import { useWallet } from "../lib/walletContext.jsx";
+import { NET } from "../lib/net";
 
 const ENDPOINTS = [
   {
@@ -72,6 +73,7 @@ export default function Playground() {
   const [walletAddr, setWalletAddr] = useState(null);
   const [balance, setBalance] = useState(null);
   const [sponsored, setSponsored] = useState(false);
+  const [liveTools, setLiveTools] = useState(null); // {id → {price, isBtc}}
   const [approving, setApproving] = useState(false);
   const [approveResult, setApproveResult] = useState(null);
 
@@ -83,6 +85,19 @@ export default function Playground() {
   // progressive reveal
   const [revealed, setRevealed] = useState(0);
   const revealTimers = useRef([]);
+
+  useEffect(() => {
+    fetch(`${NET.api}/v1/tools`)
+      .then((r) => r.json())
+      .then((d) => {
+        const m = {};
+        for (const tool of d.tools || []) {
+          m[tool.id] = { price: tool.priceDisplay || tool.price };
+        }
+        setLiveTools(m);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const k = loadWallet();
@@ -409,7 +424,7 @@ export default function Playground() {
                       endpointId === e.id ? "text-mezo-amber" : "text-white/40"
                     }`}
                   >
-                    {e.price}
+                    {(liveTools?.[e.id]?.price ?? e.price)}
                   </span>
                 </button>
               ))}

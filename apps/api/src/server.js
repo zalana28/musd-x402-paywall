@@ -25,7 +25,7 @@ app.use(express.json({ limit: "64kb" }));
 /* Tiny per-IP rate limiter (in-memory; demo-scale)                    */
 /* ------------------------------------------------------------------ */
 const hits = new Map();
-const RATE_FREE = new Set(["/health", "/stats", "/endpoints", "/v1/tools"]);
+const RATE_FREE = new Set(["/health", "/stats", "/endpoints", "/v1/tools", "/mcp"]);
 setInterval(() => hits.clear(), config.rateLimit.windowMs).unref();
 app.use((req, res, next) => {
   if (RATE_FREE.has(req.path)) return next();
@@ -246,14 +246,22 @@ app.get("/v1/tools", (_req, res) => {
     mezoDiscountBps: config.mezoAddress ? config.mezoDiscountBps : null,
     mezoDiscountHint: mezoDiscountNote(),
     facilitator: config.facilitatorUrl,
-    tools: ENDPOINTS.map((e) => ({
-      id: e.id,
-      method: e.method,
-      path: e.path,
-      price: e.price,
-      description: e.description,
-      example: e.example,
-    })),
+    paymentAsset: config.paymentAsset,
+    tools: ENDPOINTS.map((e) => {
+      const parsed = priceFor(e.price);
+      return {
+        id: e.id,
+        method: e.method,
+        path: e.path,
+        price: e.price,
+        priceDisplay:
+          typeof parsed === "object"
+            ? `${Number(BigInt(parsed.amount)) / 1e18} ${config.paymentAsset === "btc" ? "BTC" : ""}`.trim()
+            : e.price,
+        description: e.description,
+        example: e.example,
+      };
+    }),
   });
 });
 
@@ -298,6 +306,85 @@ app.get("/demo/sponsored", (req, res) => {
     sponsored: true,
     sponsoredLabel: `Sponsored demo — judged run at ${sponsoredAt}. In production this settle would carry a real Mezo tx hash.`,
     meta: { model: "demo-haiku-v1", network: config.network, sponsoredAt },
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Paid MCP endpoint — JSON-RPC 2.0 over HTTP (Streamable-HTTP style). */
+/* tools/call proxies to the paywalled endpoints and passes the x402   */
+/* PAYMENT-SIGNATURE through, so MCP clients pay per call.             */
+/* ------------------------------------------------------------------ */
+app.post("/mcp", async (req, res) => {
+  const { id, method, params } = req.body || {};
+  const ok = (result) => res.json({ jsonrpc: "2.0", id, result });
+  const fail = (code, message, data) =>
+    res.json({ jsonrpc: "2.0", id, error: { code, message, data } });
+
+  if (method === "initialize") {
+    return ok({
+      protocolVersion: "2025-03-26",
+      capabilities: { tools: {} },
+      serverInfo: { name: "musd-x402-paywall", version: "0.1.0" },
+    });
+  }
+  if (method === "tools/list") {
+    return ok({
+      tools: ENDPOINTS.map((e) => ({
+        name: e.id,
+        description: `${e.description} — ${e.price} per call, settled via x402 on Mezo (eip155:31611).`,
+        inputSchema:
+          e.method === "GET"
+            ? { type: "object", properties: { [e.param]: { type: "string" } }, required: [e.param] }
+            : { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
+      })),
+    });
+  }
+  if (method === "tools/call") {
+    const e = ENDPOINTS.find((x) => x.id === params?.name);
+    if (!e) return fail(-32602, "unknown tool: " + params?.name);
+    const url = new URL(`http://127.0.0.1:${config.port}${e.path}`);
+    if (e.method === "GET") url.searchParams.set(e.param, String(params?.arguments?.[e.param] ?? ""));
+    const headers = { "Content-Type": "application/json" };
+    if (req.headers["payment-signature"]) headers["PAYMENT-SIGNATURE"] = req.headers["payment-signature"];
+    const r = await fetch(url, {
+      method: e.method,
+      headers,
+      body: e.method === "POST" ? JSON.stringify({ text: String(params?.arguments?.text ?? "").slice(0, 8000) }) : undefined,
+    }).catch(() => null);
+    if (!r) return fail(-32603, "upstream error");
+    if (r.status === 402) {
+      return fail(-32001, "payment required", {
+        howToPay: "Retry this tools/call with an x402 PAYMENT-SIGNATURE header carrying a signed PaymentPayload for this resource.",
+        price: e.price,
+        asset: config.paymentAsset === "btc" ? "BTC (0x7b7C…000)" : "MUSD",
+        network: config.network,
+        facilitator: config.facilitatorUrl,
+      });
+    }
+    const data = await r.json().catch(() => ({}));
+    return ok({
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: data,
+      isError: false,
+    });
+  }
+  return fail(-32601, "method not found");
+});
+
+/* Receipt lookup — verify what a settlement txHash paid for. */
+app.get("/v1/receipt/:txHash", (req, res) => {
+  const s = settlements.find(
+    (x) => (x.txHash || "").toLowerCase() === String(req.params.txHash).toLowerCase()
+  );
+  if (!s) {
+    return res
+      .status(404)
+      .json({ error: "receipt not found in server telemetry (restarts clear it — verify the tx on the explorer)" });
+  }
+  res.json({
+    ...s,
+    network: config.network,
+    note: "Receipt from the onAfterSettle hook; the tx itself is verifiable on the explorer.",
   });
 });
 

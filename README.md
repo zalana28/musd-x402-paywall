@@ -67,6 +67,9 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.com docker compose up --build
 - **MEZO track** — holder **eligibility check** via `/mezo/discount/:address`, advertised in `GET /v1/tools` and shown on the playground wallet card. Quotes are flat; applying the discount at settlement (partial-settlement override) is roadmap. Set `MEZO_ADDRESS` in `apps/api/.env` (and `NEXT_PUBLIC_MEZO_ADDRESS` in `apps/web/.env.local`) to make the on-chain check live.
 - **Juri mode (sponsored demo)** — enable with `DEMO_SPONSOR=true` in `apps/api/.env`. `GET /demo/sponsored` returns a happy-path haiku with `sponsoredLabel` and **does not touch the on-chain ledger** — the playground toggle `sponsored: true` drives the visualizer into a 6-step sponsored flow with the correct endpoint-respecting handler.
 - **Agent discovery** — `GET /v1/tools`: catalog of every paid tool (prices, asset, facilitator, MEZO hint)
+- **Paid MCP server** — `POST /mcp` (JSON-RPC 2.0): `initialize` / `tools/list` / `tools/call`; tool calls proxy to the paywalled endpoints with the x402 `PAYMENT-SIGNATURE` passed through — verified end-to-end with a real on-chain payment
+- **Receipts** — `GET /v1/receipt/:txHash` returns what a settlement paid for (from `onAfterSettle` telemetry)
+- **Multi-asset ledger** — scans MUSD **and** BTC-ERC20 transfers to the seller with per-asset totals
 - **Persistent agent wallets** — generated in the browser, stored in `localStorage`, key never saved server-side; live MUSD balance + Permit2 allowance chip + copy address
 - **Connect Wallet (injected)** — MetaMask/Brave/OKX via EIP-1193: auto add/switch to Mezo Testnet, Approve MUSD/BTC from the wallet, and every payment is an EIP-712 popup signed **in the user's own wallet** (two-phase prepare → sign → submit; verified on-chain with tx 0xecf35ab3…). BTC wallets (Xverse/Unisat) land via Mezo Passport (roadmap).
 - **Live handshake visualizer** — progressive reveal + payload inspector + sponsored-friendly labels
