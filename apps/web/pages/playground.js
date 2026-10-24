@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import FlowVisualizer from "../components/FlowVisualizer";
 import ResultCard from "../components/ResultCard";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import {
+  connectWallet,
+  getInjected,
+  walletSignTypedData,
+  walletApprovePermit2,
+} from "../lib/wallet.js";
 
 const ENDPOINTS = [
   {
@@ -67,6 +73,11 @@ export default function Playground() {
   const [sponsored, setSponsored] = useState(false);
   const [approving, setApproving] = useState(false);
   const [approveResult, setApproveResult] = useState(null);
+
+  // external (injected) wallet state — MetaMask/Brave/OKX
+  const [extWallet, setExtWallet] = useState(null); // { address }
+  const [extConnecting, setExtConnecting] = useState(false);
+  const [extError, setExtError] = useState(null);
 
   // progressive reveal
   const [revealed, setRevealed] = useState(0);
@@ -142,6 +153,132 @@ export default function Playground() {
     }
   }
 
+  async function connectExt() {
+    setExtConnecting(true);
+    setExtError(null);
+    try {
+      const w = await connectWallet();
+      setExtWallet(w);
+    } catch (e) {
+      const msg = String(e?.message || e);
+      setExtError(
+        msg === "NO_WALLET"
+          ? "No injected wallet detected. Install MetaMask (or use Brave) and reload."
+          : msg
+      );
+    } finally {
+      setExtConnecting(false);
+    }
+  }
+
+  function disconnectExt() {
+    setExtWallet(null);
+    setExtError(null);
+  }
+
+  async function approveViaWallet(assetAddress, label) {
+    setExtError(null);
+    try {
+      const tx = await walletApprovePermit2(assetAddress);
+      setApproveResult({
+        ok: true,
+        approvals: [{ asset: label, txHash: tx }],
+      });
+      setTimeout(() => walletAddr && refreshBalance(), 6000);
+      setTimeout(() => walletAddr && refreshBalance(), 15000);
+    } catch (e) {
+      setExtError(String(e?.message || e));
+    }
+  }
+
+  /** Wallet-paid flow: prepare → sign in the user's wallet → submit. */
+  async function runWithExternalWallet() {
+    const steps = [];
+    const push = (id, label, status, detail) =>
+      steps.push({ id, label, status, detail: detail ?? null });
+
+    const prep = await fetch("/api/agent/prepare", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpointId,
+        params: ep.textarea ? { text: param } : { [ep.param || "text"]: param },
+        payerAddress: extWallet.address,
+      }),
+    }).then((r) => r.json());
+    if (!prep.ok) throw new Error(prep.error || "prepare failed");
+
+    const req0 = prep.paymentRequired?.accepts?.[0];
+    const assetIsBtc =
+      req0?.asset?.toLowerCase() ===
+      "0x7b7c000000000000000000000000000000000000";
+    push("request", "Request", "done", {
+      method: ep.method,
+      url: prep.request.url,
+    });
+    push("402", "402 · Price quote", "done", {
+      price: req0?.amount
+        ? `${Number(BigInt(req0.amount)) / 1e18} ${assetIsBtc ? "BTC" : "USD"}`
+        : "?",
+      asset: req0?.asset,
+      network: req0?.network,
+      payTo: req0?.payTo,
+    });
+
+    const signature = await walletSignTypedData(
+      extWallet.address,
+      prep.typedData
+    );
+    const payload = JSON.parse(JSON.stringify(prep.payload));
+    if (payload.payload && "signature" in payload.payload) {
+      payload.payload.signature = signature;
+    }
+    push("sign", "Sign in wallet", "done", {
+      signer: extWallet.address,
+      typedData: prep.typedData,
+      signaturePrefix: String(signature).slice(0, 34) + "…",
+    });
+
+    const sub = await fetch("/api/agent/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: prep.request, payload }),
+    }).then((r) => r.json());
+    push(
+      "retry",
+      "Paid retry",
+      sub.status === 200 ? "done" : "failed",
+      { status: sub.status }
+    );
+
+    if (sub.ok) {
+      const settle = sub.settle || {};
+      push("verify", "Facilitator verify", "done", {
+        payer: settle.payer ?? extWallet.address,
+      });
+      push("settle", "Settle on Mezo", "done", {
+        success: settle.success ?? true,
+        transaction: settle.transaction ?? null,
+        explorer: settle.transaction
+          ? `${process.env.NEXT_PUBLIC_EXPLORER || "https://explorer.test.mezo.org"}/tx/${settle.transaction}`
+          : null,
+        raw: settle,
+      });
+      return { steps, result: sub.result };
+    }
+
+    const reason = sub.error || "verification_failed";
+    push("verify", "Facilitator verify", "failed", { reason });
+    push("settle", "Settle on Mezo", "pending", { note: "skipped" });
+    return {
+      steps,
+      result: null,
+      fundingHint:
+        reason.toLowerCase().includes("balance") ||
+        reason.toLowerCase().includes("allowance"),
+    };
+  }
+
   function refreshBalance() {
     if (!walletAddr) return;
     fetch("/api/agent/balance", {
@@ -174,6 +311,28 @@ export default function Playground() {
     setError(null);
     setData(null);
     setRevealed(0);
+    if (extWallet) {
+      try {
+        const out = await runWithExternalWallet();
+        setData({ agent: extWallet.address, ...out });
+        reveal(out.steps || []);
+        if (extWallet.address) {
+          fetch("/api/agent/balance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ address: extWallet.address }),
+          })
+            .then((r) => r.json())
+            .then((j) => !j.error && setBalance(j))
+            .catch(() => {});
+        }
+      } catch (e) {
+        setError(String(e?.message || e));
+      } finally {
+        setRunning(false);
+      }
+      return;
+    }
     try {
       const res = await fetch("/api/agent/run", {
         method: "POST",
@@ -319,10 +478,82 @@ export default function Playground() {
             </button>
           </div>
 
+          {/* connect external wallet */}
+          <div className="glass p-6">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="label">connect wallet</p>
+              {extWallet && (
+                <button
+                  onClick={disconnectExt}
+                  className="text-[11px] text-white/40 underline hover:text-mezo-rose"
+                >
+                  disconnect
+                </button>
+              )}
+            </div>
+            {!extWallet ? (
+              <>
+                <button
+                  onClick={connectExt}
+                  disabled={extConnecting}
+                  className="btn-ghost w-full justify-center"
+                >
+                  {extConnecting ? "Connecting…" : "🦊 Connect MetaMask / Brave"}
+                </button>
+                <p className="mt-3 text-[12px] leading-relaxed text-white/40">
+                  Payments are signed <span className="text-white/70">in your own wallet</span> (EIP-712
+                  popup) — the key never touches this server. BTC wallets
+                  (Xverse/Unisat) arrive via Mezo Passport (roadmap).
+                </p>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <code className="mono block break-all text-[11.5px] leading-snug text-mezo-gold/90">
+                  {extWallet.address}
+                </code>
+                <p className="text-[12px] leading-relaxed text-white/45">
+                  External wallet active — the Run button now asks{" "}
+                  <span className="text-white/70">your wallet</span> to sign each payment.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() =>
+                      approveViaWallet(
+                        process.env.NEXT_PUBLIC_MUSD_ADDRESS ||
+                          "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+                        "MUSD"
+                      )
+                    }
+                    className="btn-ghost !py-2 !text-xs"
+                  >
+                    Approve MUSD
+                  </button>
+                  <button
+                    onClick={() =>
+                      approveViaWallet(
+                        process.env.NEXT_PUBLIC_BTC_ERC20_ADDRESS ||
+                          "0x7b7C000000000000000000000000000000000000",
+                        "BTC"
+                      )
+                    }
+                    className="btn-ghost !py-2 !text-xs"
+                  >
+                    Approve BTC
+                  </button>
+                </div>
+              </div>
+            )}
+            {extError && (
+              <p className="mt-3 text-[12px] leading-relaxed text-mezo-rose/90">
+                {extError}
+              </p>
+            )}
+          </div>
+
           {/* agent wallet card */}
           <div className="glass p-6">
             <div className="mb-3 flex items-center justify-between">
-              <p className="label">agent wallet</p>
+              <p className="label">agent wallet (burner)</p>
               <label className="flex cursor-pointer items-center gap-2 text-xs text-white/55">
                 <input
                   type="checkbox"

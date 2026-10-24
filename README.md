@@ -68,6 +68,7 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.com docker compose up --build
 - **Juri mode (sponsored demo)** — enable with `DEMO_SPONSOR=true` in `apps/api/.env`. `GET /demo/sponsored` returns a happy-path haiku with `sponsoredLabel` and **does not touch the on-chain ledger** — the playground toggle `sponsored: true` drives the visualizer into a 6-step sponsored flow with the correct endpoint-respecting handler.
 - **Agent discovery** — `GET /v1/tools`: catalog of every paid tool (prices, asset, facilitator, MEZO hint)
 - **Persistent agent wallets** — generated in the browser, stored in `localStorage`, key never saved server-side; live MUSD balance + Permit2 allowance chip + copy address
+- **Connect Wallet (injected)** — MetaMask/Brave/OKX via EIP-1193: auto add/switch to Mezo Testnet, Approve MUSD/BTC from the wallet, and every payment is an EIP-712 popup signed **in the user's own wallet** (two-phase prepare → sign → submit; verified on-chain with tx 0xecf35ab3…). BTC wallets (Xverse/Unisat) land via Mezo Passport (roadmap).
 - **Live handshake visualizer** — progressive reveal + payload inspector + sponsored-friendly labels
 - **Settlement telemetry** — counted by the real `onAfterSettle` hook (`GET /stats`)
 - **Hardening** — per-IP rate limit (90/min, free paths exempt), CORS allowlist, clamps, timeouts
