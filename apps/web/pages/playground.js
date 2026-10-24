@@ -65,6 +65,8 @@ export default function Playground() {
   const [walletAddr, setWalletAddr] = useState(null);
   const [balance, setBalance] = useState(null);
   const [sponsored, setSponsored] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [approveResult, setApproveResult] = useState(null);
 
   // progressive reveal
   const [revealed, setRevealed] = useState(0);
@@ -113,6 +115,43 @@ export default function Playground() {
     setPersist(false);
     setWalletKey(null);
     setWalletAddr(null);
+    setApproveResult(null);
+  }
+
+  async function approvePermit2() {
+    if (!walletKey) return;
+    setApproving(true);
+    setApproveResult(null);
+    try {
+      const r = await fetch("/api/agent/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentPrivateKey: walletKey }),
+      });
+      const j = await r.json();
+      setApproveResult(j);
+      if (j.ok) {
+        // allowance takes effect once the tx mines — poll balance a couple times
+        setTimeout(() => walletAddr && refreshBalance(), 6000);
+        setTimeout(() => walletAddr && refreshBalance(), 15000);
+      }
+    } catch (e) {
+      setApproveResult({ ok: false, error: String(e?.message || e) });
+    } finally {
+      setApproving(false);
+    }
+  }
+
+  function refreshBalance() {
+    if (!walletAddr) return;
+    fetch("/api/agent/balance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: walletAddr }),
+    })
+      .then((r) => r.json())
+      .then((j) => !j.error && setBalance(j))
+      .catch(() => {});
   }
 
   function reveal(steps) {
@@ -355,6 +394,32 @@ export default function Playground() {
                   Stored only in this browser (localStorage). Fund it once →
                   every run settles on-chain and appears in the Ledger.
                 </p>
+                {balance && !balance.ready && (
+                  <div className="space-y-2">
+                    <button
+                      onClick={approvePermit2}
+                      disabled={approving}
+                      className="btn-primary w-full justify-center !py-2 !text-sm"
+                    >
+                      {approving ? "Sending approval tx…" : "Approve Permit2 (needs BTC gas)"}
+                    </button>
+                    {approveResult?.ok ? (
+                      <p className="mono break-all text-[11px] text-mezo-mint">
+                        ✓ tx{" "}
+                        <a href={approveResult.explorer} target="_blank" rel="noreferrer" className="underline">
+                          {approveResult.txHash.slice(0, 18)}…
+                        </a>{" "}
+                        — refresh in a few seconds
+                      </p>
+                    ) : approveResult && !approveResult.ok ? (
+                      <p className="text-[11px] leading-relaxed text-mezo-rose/90">{approveResult.error}</p>
+                    ) : (
+                      <p className="text-[11px] leading-relaxed text-white/35">
+                        Prasyarat: wallet sudah punya MUSD + sedikit BTC gas (~0.001) untuk satu tx approval.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -425,34 +490,25 @@ function FundingPanel({ addr, persist }) {
       )}
       <ol className="ml-4 list-decimal space-y-2 text-sm text-white/65">
         <li>
-          Claim testnet BTC gas at{" "}
-          <a
-            href="https://faucet.test.mezo.org"
-            target="_blank"
-            rel="noreferrer"
-            className="mono text-mezo-gold hover:underline"
-          >
-            faucet.test.mezo.org
-          </a>
+          Kirim ke alamat agent di atas — <span className="text-mezo-amber">HANYA Mezo TESTNET</span> (chain 31611):{" "}
+          <span className="mono text-white/80">±1 MUSD</span> (kontrak{" "}
+          <span className="mono">0x1189…c503</span>) +{" "}
+          <span className="mono text-white/80">~0.001 BTC gas</span>
         </li>
         <li>
-          Borrow MUSD against testnet BTC at{" "}
-          <a
-            href="https://app.mezo.org"
-            target="_blank"
-            rel="noreferrer"
-            className="mono text-mezo-gold hover:underline"
-          >
+          Sumber dana: BTC gas di{" "}
+          <a href="https://faucet.test.mezo.org" target="_blank" rel="noreferrer" className="mono text-mezo-gold hover:underline">
+            faucet.test.mezo.org
+          </a>{" "}
+          · pinjam MUSD dengan BTC di{" "}
+          <a href="https://app.mezo.org" target="_blank" rel="noreferrer" className="mono text-mezo-gold hover:underline">
             app.mezo.org
           </a>{" "}
-          and send a little to the agent address above
+          (atau minta di Discord Mezo #faucet)
         </li>
         <li>
-          Approve Permit2 once for MUSD (one tx — snippet on the{" "}
-          <a href="/docs" className="text-mezo-gold hover:underline">
-            Docs
-          </a>{" "}
-          page); the balance chip turns green
+          Setelah keduanya sampai, klik <span className="text-white/85">Approve Permit2</span> di kartu wallet — chip berubah hijau{" "}
+          <span className="mono text-mezo-mint">ready to pay</span>
         </li>
       </ol>
     </div>
