@@ -97,7 +97,23 @@ function mezoDiscountNote() {
 
 /* ------------------------------------------------------------------ */
 /* x402 paywall middleware — the whole billing layer is this block.    */
+/* PAYMENT_ASSET=musd quotes USD prices (resolved to MUSD);            */
+/* PAYMENT_ASSET=btc quotes the same numerals in the native-BTC        */
+/* ERC20 mirror (0x7b7C…000), which the facilitator settles too.       */
 /* ------------------------------------------------------------------ */
+const parseUsd = (s) => Number(String(s).replace(/[^0-9.]/g, "")) || 0;
+const priceFor = (endpointPrice) => {
+  if (config.paymentAsset !== "btc") return endpointPrice;
+  const amount = BigInt(Math.round(parseUsd(endpointPrice) * 1e18)).toString();
+  // EIP-712 domain of the paying token must ride inside the AssetAmount;
+  // the facilitator settles this asset via permit2 (not eip3009)
+  return {
+    asset: config.btcAddress,
+    amount,
+    extra: { name: "BTC", version: "1", assetTransferMethod: "permit2" },
+  };
+};
+
 const routes = Object.fromEntries(
   ENDPOINTS.map((e) => [
     `${e.method} ${e.path}`,
@@ -105,8 +121,13 @@ const routes = Object.fromEntries(
       accepts: {
         scheme: "exact",
         network: config.network,
-        price: e.price,
+        price: priceFor(e.price),
         payTo: config.payTo,
+        // EIP-712 domain of the paying token (required for AssetAmount prices;
+        // the SDK adds it automatically for USD-string prices → MUSD)
+        ...(config.paymentAsset === "btc"
+          ? { extra: { name: "BTC", version: "1" } }
+          : {}),
       },
       description: e.description,
       mimeType: "application/json",

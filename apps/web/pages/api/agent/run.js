@@ -125,8 +125,13 @@ export default async function handler(req, res) {
       return res.json({ agent: account.address, steps, result: null });
     }
     const req0 = paymentRequired?.accepts?.[0];
+    const assetIsBtc =
+      req0?.asset?.toLowerCase() ===
+      "0x7b7c000000000000000000000000000000000000";
     push("402", "402 · Price quote", "done", {
-      price: req0?.amount ? `${Number(BigInt(req0.amount)) / 1e18} USD` : "?",
+      price: req0?.amount
+        ? `${Number(BigInt(req0.amount)) / 1e18} ${assetIsBtc ? "BTC" : "USD"}`
+        : "?",
       asset: req0?.asset,
       assetName: req0?.extra?.name,
       network: req0?.network,
@@ -136,6 +141,8 @@ export default async function handler(req, res) {
 
     // 2) Agent signs the payment payload (EIP-712, permit2)
     const client = new x402Client();
+    // allow paying in any advertised asset (MUSD default; BTC mirror in btc mode)
+    client.setSpendControls({ allowedAssets: true });
     registerExactEvmScheme(client, {
       signer: account,
       schemeOptions: { rpcUrl: RPC },

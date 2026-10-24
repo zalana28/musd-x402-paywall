@@ -359,11 +359,12 @@ export default function Playground() {
                 </div>
                 {balance ? (
                   <div className="flex items-center justify-between">
-                    <span className="mono text-xs text-white/60">
+                    <span className="mono text-left text-xs leading-relaxed text-white/60">
                       {balance.musdBalance.toFixed(3)} MUSD ·{" "}
-                      {balance.permit2Allowance > 0
-                        ? "permit2 ✓"
-                        : "permit2 ✗"}
+                      {balance.permit2Allowance > 0 ? "permit2 ✓" : "permit2 ✗"}
+                      <br />
+                      {balance.btcBalance.toFixed(4)} BTC ·{" "}
+                      {balance.btcPermit2 > 0 ? "permit2 ✓" : "permit2 ✗"}
                     </span>
                     <span
                       className={`chip !py-0.5 !text-[10px] ${
@@ -401,16 +402,29 @@ export default function Playground() {
                       disabled={approving}
                       className="btn-primary w-full justify-center !py-2 !text-sm"
                     >
-                      {approving ? "Sending approval tx…" : "Approve Permit2 (needs BTC gas)"}
+                      {approving ? "Sending approvals…" : "Approve Permit2 — MUSD + BTC"}
                     </button>
                     {approveResult?.ok ? (
-                      <p className="mono break-all text-[11px] text-mezo-mint">
-                        ✓ tx{" "}
-                        <a href={approveResult.explorer} target="_blank" rel="noreferrer" className="underline">
-                          {approveResult.txHash.slice(0, 18)}…
-                        </a>{" "}
-                        — refresh in a few seconds
-                      </p>
+                      <div className="space-y-0.5">
+                        {(approveResult.approvals || [])
+                          .filter((a) => a.txHash)
+                          .map((a) => (
+                            <p key={a.asset} className="mono break-all text-[11px] text-mezo-mint">
+                              ✓ {a.asset} tx{" "}
+                              <a
+                                href={`https://explorer.test.mezo.org/tx/${a.txHash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              >
+                                {a.txHash.slice(0, 16)}…
+                              </a>
+                            </p>
+                          ))}
+                        <p className="text-[11px] text-white/35">
+                          approvals mined → chip turns ready
+                        </p>
+                      </div>
                     ) : approveResult && !approveResult.ok ? (
                       <p className="text-[11px] leading-relaxed text-mezo-rose/90">{approveResult.error}</p>
                     ) : (

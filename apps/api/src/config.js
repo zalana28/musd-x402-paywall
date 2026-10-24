@@ -13,6 +13,12 @@ export const config = {
   musdAddress:
     process.env.MUSD_ADDRESS || "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
   mezoAddress: process.env.MEZO_ADDRESS || null,
+  // ERC20 mirror of native BTC on Mezo — accepted by the x402 facilitator
+  btcAddress:
+    process.env.BTC_ERC20_ADDRESS ||
+    "0x7b7C000000000000000000000000000000000000",
+  // Settlement asset for quotes: "musd" (default) or "btc"
+  paymentAsset: (process.env.PAYMENT_ASSET || "musd").toLowerCase(),
   facilitatorUrl:
     process.env.FACILITATOR_URL || "https://facilitator.vativ.io",
   payTo: process.env.SELLER_ADDRESS,
