@@ -72,7 +72,6 @@ export default function Playground() {
   const [walletKey, setWalletKey] = useState(null);
   const [walletAddr, setWalletAddr] = useState(null);
   const [balance, setBalance] = useState(null);
-  const [sponsored, setSponsored] = useState(false);
   const [liveTools, setLiveTools] = useState(null); // {id → {price, isBtc}}
   const [approving, setApproving] = useState(false);
   const [approveResult, setApproveResult] = useState(null);
@@ -341,7 +340,6 @@ export default function Playground() {
           endpointId,
           params: ep.textarea ? { text: param } : { [ep.param || "text"]: param },
           agentPrivateKey: persist && walletKey ? walletKey : null,
-          sponsored: Boolean(sponsored),
         }),
       });
       const json = await res.json();
@@ -383,16 +381,6 @@ export default function Playground() {
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         {/* control panel */}
         <div className="flex h-fit flex-col gap-4">
-          <button
-              onClick={() => setSponsored((v) => !v)}
-              className={`mb-1 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${sponsored ? "border-mezo-orange/60 bg-mezo-orange/10" : "border-white/10 bg-white/[0.02] hover:border-white/25"}`}
-            >
-              <span>
-                <span className="block font-display text-sm font-semibold text-white">Juri Mode — Sponsored Demo</span>
-                <span className="mono text-[11px] text-white/45">GET /demo/sponsored · instant success · requires DEMO_SPONSOR=true</span>
-              </span>
-              <span className={`ml-2 shrink-0 rounded-full px-2.5 py-0.5 mono text-[11px] font-semibold ${sponsored ? "bg-mezo-orange text-[#1a0f02]" : "bg-white/10 text-white/40"}`}>{sponsored ? "ON" : "OFF"}</span>
-            </button>
           <div className="glass p-6">
             <p className="label mb-3">endpoint</p>
             <div className="mb-6 flex flex-col gap-2">

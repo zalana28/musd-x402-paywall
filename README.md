@@ -65,14 +65,14 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.com docker compose up --build
 
 - **4 metered endpoints** — haiku `$0.001`, oracle `$0.002`, sentiment `$0.003`, summarize `$0.005`
 - **MEZO track** — holder **eligibility check** via `/mezo/discount/:address`, advertised in `GET /v1/tools` and shown on the playground wallet card. Quotes are flat; applying the discount at settlement (partial-settlement override) is roadmap. Set `MEZO_ADDRESS` in `apps/api/.env` (and `NEXT_PUBLIC_MEZO_ADDRESS` in `apps/web/.env.local`) to make the on-chain check live.
-- **Juri mode (sponsored demo)** — enable with `DEMO_SPONSOR=true` in `apps/api/.env`. `GET /demo/sponsored` returns a happy-path haiku with `sponsoredLabel` and **does not touch the on-chain ledger** — the playground toggle `sponsored: true` drives the visualizer into a 6-step sponsored flow with the correct endpoint-respecting handler.
+- **Sponsored fallback endpoint (hidden)** — `GET /demo/sponsored`, disabled by default (`DEMO_SPONSOR=false`). Emergency happy-path for talks if the facilitator is ever down; **not exposed in the UI** so every demo you see is a real on-chain payment.
 - **Agent discovery** — `GET /v1/tools`: catalog of every paid tool (prices, asset, facilitator, MEZO hint)
 - **Paid MCP server** — `POST /mcp` (JSON-RPC 2.0): `initialize` / `tools/list` / `tools/call`; tool calls proxy to the paywalled endpoints with the x402 `PAYMENT-SIGNATURE` passed through — verified end-to-end with a real on-chain payment
 - **Receipts** — `GET /v1/receipt/:txHash` returns what a settlement paid for (from `onAfterSettle` telemetry)
 - **Multi-asset ledger** — scans MUSD **and** BTC-ERC20 transfers to the seller with per-asset totals
 - **Persistent agent wallets** — generated in the browser, stored in `localStorage`, key never saved server-side; live MUSD balance + Permit2 allowance chip + copy address
 - **Connect Wallet (injected)** — MetaMask/Brave/OKX via EIP-1193: auto add/switch to Mezo Testnet, Approve MUSD/BTC from the wallet, and every payment is an EIP-712 popup signed **in the user's own wallet** (two-phase prepare → sign → submit; verified on-chain with tx 0xecf35ab3…). BTC wallets (Xverse/Unisat) land via Mezo Passport (roadmap).
-- **Live handshake visualizer** — progressive reveal + payload inspector + sponsored-friendly labels
+- **Live handshake visualizer** — progressive reveal + payload inspector
 - **Settlement telemetry** — counted by the real `onAfterSettle` hook (`GET /stats`)
 - **Hardening** — per-IP rate limit (90/min, free paths exempt), CORS allowlist, clamps, timeouts
 
@@ -83,7 +83,6 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.com docker compose up --build
                                     ▼
   Agent ── 402 ─────────►  Paywall (x402 exact/permit2, gasless buyer, vativ.io)
         ◄── EIP-712 ──  ── onAfterSettle ──► /stats + ledger (eth_getLogs)
-  Juri ── /demo/sponsored (no facilitator) ──► sponsored ribbon + no ledger write
 ```
 
 ## Testing
@@ -111,16 +110,16 @@ web runner (would have broken UI rendering of successful settlements).
 ## 90-second demo script (use it for the video)
 
 ```
-0:00  (Landing)  "We built a Stripe for AI agents — every API call is a micropayment in MUSD on Mezo."
-0:08  (Playground) toggle **Juri Mode ON**, press ▶ Run paying agent — flow animates to ✓ Sponsored fetch → ✓ Sponsor verify → ✓ Settle (sponsored)
-0:30  Toggle Juri Mode OFF, press Run again — the real facilitator says permit2_insufficient_balance (this IS the live Mezo verification).
-0:45  Flip the agent wallet to **persistent**, copy the address, fund it with faucet → MUSD → one Permit2 approval.
-0:58  Run once more with the now-funded persistent wallet — ✓ settled on Mezo · tx 0x… — flip to Ledger tab: the transfer is there.
+0:00  (Landing)  "We built a Stripe for AI agents — every API call is a micropayment on Mezo."
+0:08  (Playground) press ▶ Run paying agent — real 402 → EIP-712 sign → facilitator verify → ✓ settled on Mezo · tx 0x… (~6s)
+0:30  Run 2–3 more times on different endpoints — each request pays its own price, no API key, no gas for the buyer.
+0:45  Show the wallet card: persistent agent wallet, MUSD/BTC balance, Permit2 allowance — or hit Connect Wallet and sign an EIP-712 payment in MetaMask.
+1:00  (Ledger) every settlement from the video is already on-chain — per-asset totals straight from eth_getLogs.
 1:10  (Docs) "One middleware line. Four endpoints. Two buildathon tracks."
 1:20  Outro: GitHub link + live URL.
 ```
 
-Rehearse once with Juri Mode ON so the video never waits.
+Every run in the video is a real on-chain settlement — nothing simulated.
 
 ## Audit log
 
@@ -164,7 +163,7 @@ Configure for production with `MEZO_ADDRESS` (and `NEXT_PUBLIC_MEZO_ADDRESS`) fo
 
 - [ ] `apps/api/.env` on disk includes `SELLER_ADDRESS` and — for demo — `DEMO_SPONSOR=true` + `MEZO_ADDRESS`
 - [ ] Register at [app.akindo.io/wave-hacks/OVOO0gdrVU8379D10](https://app.akindo.io/wave-hacks/OVOO0gdrVU8379D10) + join Discord
-- [ ] Push to GitHub (public) — record the 90-second video **with Juri Mode ON**
+- [ ] Push to GitHub (public) — record the 90-second video with the **funded persistent wallet** (real settlements)
 - [ ] Submit on AKINDO before **Oct 26**
 
 Wave 2: fund a persistent wallet for a fully on-chain video run + mainnet flag.
