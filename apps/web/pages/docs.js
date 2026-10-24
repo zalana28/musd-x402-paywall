@@ -56,7 +56,7 @@ app.use(paymentMiddlewareFromHTTPServer(
       }),
     },
   }),
-  { appName: "MUSD x402 Paywall", testnet: true }
+  { appName: "PAYWALL", testnet: true }
 ));`}</Code>
       </section>
 

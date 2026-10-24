@@ -12,8 +12,8 @@ function Layout({ children }) {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-mezo-amber to-mezo-ember text-sm font-black text-[#1a0f02] shadow-glow-sm">
               ₿
             </span>
-            <span className="font-display text-[15px] font-bold tracking-tight text-white">
-              MUSD <span className="text-mezo-amber">x402</span> Paywall
+            <span className="font-display text-[16px] font-bold tracking-[0.14em] text-white">
+              PAYWALL
             </span>
           </Link>
           <div className="flex items-center gap-0.5 text-[13px] sm:gap-1 sm:text-sm">
