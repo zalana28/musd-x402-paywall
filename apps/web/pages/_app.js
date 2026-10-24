@@ -7,7 +7,7 @@ function Layout({ children }) {
   return (
     <div className="flex min-h-screen flex-col">
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#08060b]/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+        <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between px-5">
           <Link href="/" className="flex shrink-0 items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-mezo-amber to-mezo-ember text-sm font-black text-[#1a0f02] shadow-glow-sm">
               ₿
@@ -34,7 +34,7 @@ function Layout({ children }) {
       <main className="flex-1">{children}</main>
 
       <footer className="mt-24 border-t border-white/[0.06] py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 text-sm text-white/40 sm:flex-row">
+        <div className="mx-auto flex max-w-[1360px] flex-col items-center justify-between gap-3 px-5 text-sm text-white/40 sm:flex-row">
           <p>
             Built for the{" "}
             <a

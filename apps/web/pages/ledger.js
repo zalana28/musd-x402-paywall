@@ -37,7 +37,7 @@ export default function Ledger() {
   }, [auto]);
 
   return (
-    <div className="mx-auto max-w-6xl px-5 pb-10 pt-12">
+    <div className="container-wide px-5 sm:px-8 pb-10 pt-12">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="label">on-chain revenue</p>

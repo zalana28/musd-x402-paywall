@@ -353,7 +353,7 @@ export default function Playground() {
   const shownSteps = data ? data.steps.slice(0, revealed) : [];
 
   return (
-    <div className="mx-auto max-w-6xl px-5 pb-10 pt-12">
+    <div className="container-wide px-5 sm:px-8 pb-10 pt-12">
       <p className="label">agent playground</p>
       <h1 className="mb-2 font-display text-4xl font-bold text-white">
         Watch an agent <span className="grad-text">pay per request</span>
