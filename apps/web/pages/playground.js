@@ -1,0 +1,460 @@
+import { useEffect, useRef, useState } from "react";
+import FlowVisualizer from "../components/FlowVisualizer";
+import ResultCard from "../components/ResultCard";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+
+const ENDPOINTS = [
+  {
+    id: "haiku",
+    label: "Haiku",
+    path: "GET /v1/haiku",
+    price: "$0.001",
+    param: "topic",
+    placeholder: "mezo",
+    defaults: ["mezo", "satoshis coffee", "lightning night", "cold storage"],
+  },
+  {
+    id: "answer",
+    label: "Oracle",
+    path: "GET /v1/answer",
+    price: "$0.002",
+    param: "q",
+    placeholder: "what is musd?",
+    defaults: ["what is musd?", "how does x402 work?", "who pays the gas?"],
+  },
+  {
+    id: "summarize",
+    label: "Summarize",
+    path: "POST /v1/summarize",
+    price: "$0.005",
+    placeholder: "Paste text to summarize…",
+    defaults: [],
+    textarea: true,
+  },
+  {
+    id: "sentiment",
+    label: "Sentiment",
+    path: "POST /v1/sentiment",
+    price: "$0.003",
+    placeholder: "Paste market chatter…",
+    defaults: [],
+    textarea: true,
+  },
+];
+
+const LS_KEY = "musd402.agentWallet";
+
+function loadWallet() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw && /^0x[0-9a-fA-F]{64}$/.test(raw)) return raw;
+  } catch {}
+  return null;
+}
+
+export default function Playground() {
+  const [endpointId, setEndpointId] = useState("haiku");
+  const [param, setParam] = useState("mezo");
+  const [running, setRunning] = useState(false);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+
+  // wallet state
+  const [persist, setPersist] = useState(false);
+  const [walletKey, setWalletKey] = useState(null);
+  const [walletAddr, setWalletAddr] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [sponsored, setSponsored] = useState(false);
+
+  // progressive reveal
+  const [revealed, setRevealed] = useState(0);
+  const revealTimers = useRef([]);
+
+  useEffect(() => {
+    const k = loadWallet();
+    if (k) {
+      setPersist(true);
+      setWalletKey(k);
+      setWalletAddr(privateKeyToAccount(k).address);
+    }
+  }, []);
+
+  // fetch balance whenever address changes
+  useEffect(() => {
+    if (!walletAddr) return setBalance(null);
+    let alive = true;
+    fetch("/api/agent/balance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: walletAddr }),
+    })
+      .then((r) => r.json())
+      .then((j) => alive && !j.error && setBalance(j))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [walletAddr]);
+
+  function enablePersist() {
+    const k = walletKey || generatePrivateKey();
+    try {
+      localStorage.setItem(LS_KEY, k);
+    } catch {}
+    setPersist(true);
+    setWalletKey(k);
+    setWalletAddr(privateKeyToAccount(k).address);
+  }
+
+  function disablePersist() {
+    try {
+      localStorage.removeItem(LS_KEY);
+    } catch {}
+    setPersist(false);
+    setWalletKey(null);
+    setWalletAddr(null);
+  }
+
+  function reveal(steps) {
+    revealTimers.current.forEach(clearTimeout);
+    revealTimers.current = [];
+    setRevealed(0);
+    steps.forEach((_, i) => {
+      revealTimers.current.push(
+        setTimeout(() => setRevealed(i + 1), 550 * (i + 1))
+      );
+    });
+  }
+
+  useEffect(() => () => revealTimers.current.forEach(clearTimeout), []);
+
+  const ep = ENDPOINTS.find((e) => e.id === endpointId);
+
+  async function run() {
+    setRunning(true);
+    setError(null);
+    setData(null);
+    setRevealed(0);
+    try {
+      const res = await fetch("/api/agent/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpointId,
+          params: ep.textarea ? { text: param } : { [ep.param || "text"]: param },
+          agentPrivateKey: persist && walletKey ? walletKey : null,
+          sponsored: Boolean(sponsored),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "agent run failed");
+      setData(json);
+      reveal(json.steps || []);
+      if (persist && walletAddr) {
+        fetch("/api/agent/balance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ address: walletAddr }),
+        })
+          .then((r) => r.json())
+          .then((j) => !j.error && setBalance(j))
+          .catch(() => {});
+      }
+    } catch (e) {
+      setError(String(e.message || e));
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const shownSteps = data ? data.steps.slice(0, revealed) : [];
+
+  return (
+    <div className="mx-auto max-w-6xl px-5 pb-10 pt-12">
+      <p className="label">agent playground</p>
+      <h1 className="mb-2 font-display text-4xl font-bold text-white">
+        Watch an agent <span className="grad-text">pay per request</span>
+      </h1>
+      <p className="mb-10 max-w-2xl text-[15px] leading-relaxed text-white/55">
+        Every run performs the real x402 handshake against the paywall API and
+        sends the payment to the live facilitator for verification on Mezo
+        testnet. Switch to a persistent agent wallet, fund it once with testnet
+        MUSD, and every run settles on-chain.
+      </p>
+
+      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+        {/* control panel */}
+        <div className="flex h-fit flex-col gap-4">
+          <button
+              onClick={() => setSponsored((v) => !v)}
+              className={`mb-1 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${sponsored ? "border-mezo-orange/60 bg-mezo-orange/10" : "border-white/10 bg-white/[0.02] hover:border-white/25"}`}
+            >
+              <span>
+                <span className="block font-display text-sm font-semibold text-white">Juri Mode — Sponsored Demo</span>
+                <span className="mono text-[11px] text-white/45">GET /demo/sponsored · instant success · requires DEMO_SPONSOR=true</span>
+              </span>
+              <span className={`ml-2 shrink-0 rounded-full px-2.5 py-0.5 mono text-[11px] font-semibold ${sponsored ? "bg-mezo-orange text-[#1a0f02]" : "bg-white/10 text-white/40"}`}>{sponsored ? "ON" : "OFF"}</span>
+            </button>
+          <div className="glass p-6">
+            <p className="label mb-3">endpoint</p>
+            <div className="mb-6 flex flex-col gap-2">
+              {ENDPOINTS.map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => {
+                    setEndpointId(e.id);
+                    setParam(e.defaults[0] || "");
+                    setData(null);
+                    setRevealed(0);
+                  }}
+                  className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
+                    endpointId === e.id
+                      ? "border-mezo-orange/60 bg-mezo-orange/10 shadow-glow-sm"
+                      : "border-white/10 bg-white/[0.02] hover:border-white/25"
+                  }`}
+                >
+                  <span>
+                    <span className="block font-display text-sm font-semibold text-white">
+                      {e.label}
+                    </span>
+                    <span className="mono text-[11px] text-white/40">
+                      {e.path}
+                    </span>
+                  </span>
+                  <span
+                    className={`mono text-xs font-semibold ${
+                      endpointId === e.id ? "text-mezo-amber" : "text-white/40"
+                    }`}
+                  >
+                    {e.price}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <p className="label mb-2">{ep.textarea ? "body · text" : ep.param}</p>
+            {ep.textarea ? (
+              <textarea
+                value={param}
+                onChange={(e) => setParam(e.target.value)}
+                rows={5}
+                placeholder={ep.placeholder}
+                className="w-full rounded-xl border border-white/10 bg-black/30 p-3.5 text-sm text-white/85 outline-none transition placeholder:text-white/25 focus:border-mezo-orange/60"
+              />
+            ) : (
+              <input
+                value={param}
+                onChange={(e) => setParam(e.target.value)}
+                placeholder={ep.placeholder}
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/85 outline-none transition placeholder:text-white/25 focus:border-mezo-orange/60"
+              />
+            )}
+
+            {ep.defaults.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {ep.defaults.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setParam(d)}
+                    className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/45 transition hover:border-mezo-orange/40 hover:text-mezo-gold"
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={run}
+              disabled={running}
+              className="btn-primary mt-6 w-full justify-center"
+            >
+              {running ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#1a0f02]/30 border-t-[#1a0f02]" />
+                  Running handshake…
+                </>
+              ) : (
+                <>▶ Run paying agent</>
+              )}
+            </button>
+          </div>
+
+          {/* agent wallet card */}
+          <div className="glass p-6">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="label">agent wallet</p>
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-white/55">
+                <input
+                  type="checkbox"
+                  checked={persist}
+                  onChange={(e) =>
+                    e.target.checked ? enablePersist() : disablePersist()
+                  }
+                  className="h-3.5 w-3.5 accent-[#f7931a]"
+                />
+                persistent
+              </label>
+            </div>
+
+            {!persist ? (
+              <p className="text-[13px] leading-relaxed text-white/45">
+                Ephemeral mode: a fresh keypair per run. Great for demos —
+                but it can never be funded, so settlement always stops at the
+                facilitator's balance check.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <code className="mono break-all text-[11.5px] leading-snug text-mezo-gold/90">
+                    {walletAddr}
+                  </code>
+                  <button
+                    onClick={() =>
+                      navigator.clipboard?.writeText(walletAddr || "")
+                    }
+                    className="shrink-0 rounded-md border border-white/15 px-2 py-1 text-[11px] text-white/60 transition hover:border-mezo-orange/50 hover:text-mezo-gold"
+                  >
+                    copy
+                  </button>
+                </div>
+                {balance ? (
+                  <div className="flex items-center justify-between">
+                    <span className="mono text-xs text-white/60">
+                      {balance.musdBalance.toFixed(3)} MUSD ·{" "}
+                      {balance.permit2Allowance > 0
+                        ? "permit2 ✓"
+                        : "permit2 ✗"}
+                    </span>
+                    <span
+                      className={`chip !py-0.5 !text-[10px] ${
+                        balance.ready
+                          ? "!border-mezo-mint/40 !text-mezo-mint"
+                          : "!border-mezo-rose/40 !text-mezo-rose"
+                      }`}
+                    >
+                      {balance.ready ? "ready to pay" : "needs funding"}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="mono text-xs text-white/35">
+                    checking balance…
+                  </span>
+                )}
+                              {balance?.mezoHolder ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-mezo-orange/25 bg-mezo-orange/10 px-3 py-1.5 text-xs">
+                    <span className="mono font-semibold text-mezo-gold">MEZO holder ✓</span>
+                    <span className="text-white/50">— {balance.mezoBalance.toFixed ? balance.mezoBalance.toFixed(2) : balance.mezoBalance} MEZO · discount active</span>
+                  </div>
+                ) : balance?.mezoHolder === null ? (
+                  <div className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/35">Set <span className="mono text-white/50">MEZO_ADDRESS</span> (or <span className="mono text-white/50">NEXT_PUBLIC_MEZO_ADDRESS</span>) to enable the MEZO discount check.</div>
+                ) : balance && !balance.mezoHolder ? (
+                  <div className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/35">No MEZO balance on this wallet.</div>
+                ) : null}
+                <p className="text-[12px] leading-relaxed text-white/40">
+                  Stored only in this browser (localStorage). Fund it once →
+                  every run settles on-chain and appears in the Ledger.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* output */}
+        <div className="flex flex-col gap-6">
+          {error && (
+            <div className="glass border-mezo-rose/40 p-5 text-sm text-mezo-rose">
+              {error}
+            </div>
+          )}
+
+          {data && revealed > 0 && (
+            <FlowVisualizer
+              steps={shownSteps}
+              total={data.steps.length}
+              agent={data.agent}
+            />
+          )}
+          {data && data.result && revealed >= data.steps.length && (
+            <ResultCard result={data.result} endpointId={endpointId} />
+          )}
+          {data && data.fundingHint && revealed >= data.steps.length && (
+            <FundingPanel addr={data.agent} persist={persist} />
+          )}
+          {!data && !running && !error && <IdleState />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IdleState() {
+  return (
+    <div className="glass flex h-full min-h-[420px] flex-col items-center justify-center gap-3 p-10 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-mezo-orange/10 text-3xl animate-float">
+        ⛓
+      </div>
+      <h3 className="font-display text-xl font-semibold text-white/80">
+        The pipeline is warm
+      </h3>
+      <p className="max-w-sm text-sm leading-relaxed text-white/40">
+        Pick an endpoint, press run, and watch a real x402 handshake: quote →
+        signature → facilitator verify → MUSD settlement on Mezo.
+      </p>
+    </div>
+  );
+}
+
+function FundingPanel({ addr, persist }) {
+  return (
+    <div className="glass animate-fade-up border-mezo-amber/30 p-6">
+      <h3 className="mb-1 font-display text-lg font-semibold text-mezo-gold">
+        Make settlement fully on-chain
+      </h3>
+      <p className="mb-4 text-sm leading-relaxed text-white/55">
+        The signature was valid and the facilitator verified it live — the agent
+        wallet just has no MUSD yet.{" "}
+        {persist
+          ? "Fund your persistent agent wallet below once, and every future run settles with a real transaction."
+          : "Switch the agent wallet to persistent mode first so you can fund it."}
+      </p>
+      {persist && addr && (
+        <p className="mono mb-4 break-all rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[12px] text-mezo-gold/90">
+          {addr}
+        </p>
+      )}
+      <ol className="ml-4 list-decimal space-y-2 text-sm text-white/65">
+        <li>
+          Claim testnet BTC gas at{" "}
+          <a
+            href="https://faucet.test.mezo.org"
+            target="_blank"
+            rel="noreferrer"
+            className="mono text-mezo-gold hover:underline"
+          >
+            faucet.test.mezo.org
+          </a>
+        </li>
+        <li>
+          Borrow MUSD against testnet BTC at{" "}
+          <a
+            href="https://app.mezo.org"
+            target="_blank"
+            rel="noreferrer"
+            className="mono text-mezo-gold hover:underline"
+          >
+            app.mezo.org
+          </a>{" "}
+          and send a little to the agent address above
+        </li>
+        <li>
+          Approve Permit2 once for MUSD (one tx — snippet on the{" "}
+          <a href="/docs" className="text-mezo-gold hover:underline">
+            Docs
+          </a>{" "}
+          page); the balance chip turns green
+        </li>
+      </ol>
+    </div>
+  );
+}

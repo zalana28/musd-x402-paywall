@@ -1,0 +1,15 @@
+{
+  "name": "mezo-x402-paywall",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MUSD x402 Agent Paywall — pay-per-request APIs settled in MUSD on Mezo (Buildathon Wave 1)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace apps/api",
+    "dev:web": "npm run dev --workspace apps/web",
+    "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
+    "start:api": "npm start --workspace apps/api"
+  }
+}
