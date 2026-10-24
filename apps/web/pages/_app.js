@@ -9,15 +9,7 @@ function Layout({ children }) {
     <div className="flex min-h-screen flex-col">
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#08060b]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between px-5">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.svg"
-              alt="PAYWALL logo"
-              width={30}
-              height={30}
-              className="drop-shadow-[0_0_10px_rgba(247,147,26,0.5)]"
-            />
+          <Link href="/" className="flex shrink-0 items-center">
             <span className="font-display text-[19px] font-bold tracking-tight">
               <span className="text-white">pay</span>
               <span className="grad-text">wall</span>
@@ -112,7 +104,7 @@ export default function App({ Component, pageProps }) {
           property="og:description"
           content="Agents pay per request in MUSD/BTC over x402. Gasless for buyers, one middleware line for sellers."
         />
-        <meta property="og:image" content="/logo.svg" />
+        <meta property="og:image" content="/favicon.svg" />
       </Head>
       <Layout>
         <Component {...pageProps} />
