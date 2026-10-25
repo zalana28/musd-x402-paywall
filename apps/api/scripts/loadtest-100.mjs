@@ -10,9 +10,11 @@ import { privateKeyToAccount } from "viem/accounts";
 import { createPublicClient, http, formatUnits } from "viem";
 import { appendFileSync } from "node:fs";
 
-const KEY =
-  process.env.LOAD_KEY ||
-  "0x7ac06f31395dc6ee4b568daadce92c3b2e5b22ef61bf669f2456e48fc2817091";
+const KEY = process.env.LOAD_KEY;
+if (!KEY || !/^0x[0-9a-fA-F]{64}$/.test(KEY)) {
+  console.error("Set LOAD_KEY=0x… (funded testnet buyer key) — refusing to run without it.");
+  process.exit(1);
+}
 const TOTAL = Number(process.env.LOAD_TOTAL || 100);
 const PACING_MS = Number(process.env.LOAD_PACING || 2200);
 const LOG = "/tmp/loadtest.log";

@@ -281,7 +281,7 @@ export default function Home() {
             API — settled in Bitcoin's stablecoin on Mezo.
           </p>
           <div className="relative mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/playground" className="btn-primary">Try the playground →</Link>
+            <Link id="cta-playground" href="/playground" className="btn-primary">Try the playground →</Link>
             <Link href="/docs" className="btn-ghost">Read the 5-min guide</Link>
           </div>
         </div>

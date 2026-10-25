@@ -451,6 +451,7 @@ export default function Playground() {
             )}
 
             <button
+              id="run-agent"
               onClick={run}
               disabled={running}
               className="btn-primary mt-6 w-full justify-center"
@@ -544,6 +545,7 @@ export default function Playground() {
               <p className="label">agent wallet (burner)</p>
               <label className="flex cursor-pointer items-center gap-2 text-xs text-white/55">
                 <input
+                  id="persist-toggle"
                   type="checkbox"
                   checked={persist}
                   onChange={(e) =>
