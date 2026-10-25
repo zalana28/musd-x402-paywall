@@ -235,8 +235,8 @@ export default async function handler(req, res) {
 function FUND_HINT(reason) {
   const r = String(reason).toLowerCase();
   if (r.includes("balance"))
-    return "Agent wallet holds no MUSD. Fund it with testnet MUSD to settle on-chain.";
+    return "Agent wallet holds no paying asset (MUSD or the BTC mirror). Fund it on Mezo testnet to settle on-chain.";
   if (r.includes("allowance"))
-    return "Agent wallet has not approved Permit2 to move MUSD.";
+    return "Agent wallet has not approved Permit2 to move the paying asset.";
   return "Facilitator could not verify this payment.";
 }

@@ -180,17 +180,22 @@ resourceServer.onAfterSettle(async (ctx) => {
   } catch {}
 });
 
-// restore persisted telemetry on boot (restart-safe stats & receipts)
+// restore persisted telemetry on boot (restart-safe stats & receipts).
+// The file is append-ordered (oldest first) — sort desc so the live feed
+// stays newest-first and lastSettledAt is the true latest settle.
 if (existsSync(DATA_FILE)) {
+  const restored = [];
   for (const line of readFileSync(DATA_FILE, "utf8").split("\n")) {
     if (!line.trim()) continue;
     try {
       const s = JSON.parse(line);
-      settlements.push(s);
+      restored.push(s);
       stats.paidRequests += 1;
       if (s.amountWei) stats.grossMusdWei += BigInt(s.amountWei);
     } catch {}
   }
+  restored.sort((a, b) => new Date(b.at) - new Date(a.at));
+  settlements.push(...restored.slice(0, 50));
   stats.lastSettledAt = settlements[0]?.at ?? null;
 }
 
@@ -262,11 +267,10 @@ app.get("/v1/tools", (_req, res) => {
     description: "Metered AI tools, paid per request in MUSD on Mezo",
     x402Version: 2,
     network: config.network,
-    asset: {
-      symbol: "MUSD",
-      address: config.musdAddress,
-      decimals: 18,
-    },
+    asset:
+      config.paymentAsset === "btc"
+        ? { symbol: "BTC", address: config.btcAddress, decimals: 18, note: "native-BTC ERC20 mirror on Mezo" }
+        : { symbol: "MUSD", address: config.musdAddress, decimals: 18 },
     mezoDiscountEnabled: Boolean(config.mezoAddress),
     mezoDiscountBps: config.mezoAddress ? config.mezoDiscountBps : null,
     mezoDiscountHint: mezoDiscountNote(),

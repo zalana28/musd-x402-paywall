@@ -30,6 +30,17 @@ export default async function handler(req, res) {
   if (!allowedMethods.has(request.method)) {
     return res.status(400).json({ error: "invalid method" });
   }
+  // SSRF guard: the paid retry may only target the configured paywall API.
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4021";
+  let target;
+  try {
+    target = new URL(request.url);
+  } catch {
+    return res.status(400).json({ error: "invalid url" });
+  }
+  if (target.origin !== new URL(API_BASE).origin) {
+    return res.status(400).json({ error: "url must target the paywall API" });
+  }
 
   try {
     const paid = await fetch(request.url, {
