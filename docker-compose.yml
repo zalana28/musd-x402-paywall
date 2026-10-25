@@ -18,7 +18,6 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4021}
         NEXT_PUBLIC_MEZO_ADDRESS: ${NEXT_PUBLIC_MEZO_ADDRESS:-}
-        NEXT_PUBLIC_DEMO_SPONSOR: "true"
     environment:
       # fallback built-time NEXT_PUBLIC_* live in apps/web/.env.local;
       # runtime override (e.g. hosted API URL) can be set here

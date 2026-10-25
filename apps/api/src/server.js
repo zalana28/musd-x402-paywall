@@ -345,6 +345,8 @@ app.get("/demo/sponsored", (req, res) => {
 /* ------------------------------------------------------------------ */
 app.post("/mcp", async (req, res) => {
   const { id, method, params } = req.body || {};
+  // JSON-RPC 2.0: a request without an id is a notification — never reply.
+  if (id === undefined) return res.status(204).end();
   const ok = (result) => res.json({ jsonrpc: "2.0", id, result });
   const fail = (code, message, data) =>
     res.json({ jsonrpc: "2.0", id, error: { code, message, data } });
