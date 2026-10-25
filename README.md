@@ -33,7 +33,7 @@ Built for the [Mezo Buildathon](https://mezo.org/blog/mezo-buildathon-is-underwa
 |---|---|
 | Paywall API | Express + `@x402/express` v2.28, `@x402/evm` (ExactEvmScheme), `HTTPFacilitatorClient` · `onAfterSettle` telemetry |
 | Web | Next.js 14 + Tailwind, agent runner on `@x402/core/client` + `@x402/fetch` |
-| Ledger | Chunked+parallel `eth_getLogs` on MUSD (indexer-less), 10s cache |
+| Ledger | Chunked+parallel `eth_getLogs` on MUSD + BTC mirror (indexer-less), 10s cache |
 | Tracks | **MUSD** (settlement) + **MEZO** (holder discount check) — both buildathon tracks |
 | Chain | Mezo Testnet `eip155:31611` · MUSD `0x1189…c503` · facilitator `vativ.io` |
 
